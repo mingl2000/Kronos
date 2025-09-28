@@ -2,8 +2,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import sys
 sys.path.append("../")
+sys.path.append("/mnt/d/PriProjects/Kronos")
 from model import Kronos, KronosTokenizer, KronosPredictor
-
+from TDXData4 import GetTDXData_v3
 
 def plot_prediction(kline_df, pred_df):
     pred_df.index = kline_df.index[-pred_df.shape[0]:]
@@ -38,17 +39,41 @@ def plot_prediction(kline_df, pred_df):
     plt.show()
 
 
+
+import argparse
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Print Fibonacci numbers by count or up-to limit.",
+    )
+    parser.add_argument(
+        "--ticker",
+        type=str,
+        default='000001.ss',
+        help="ticker in Yahoo format 000001.ss or 000001.sz",
+    )
+    parser.add_argument(
+        "--interval",
+        default="5m",
+        help="5m,1d",
+    )
+    return parser.parse_args()
+
 # 1. Load Model and Tokenizer
 tokenizer = KronosTokenizer.from_pretrained("NeoQuasar/Kronos-Tokenizer-base")
 model = Kronos.from_pretrained("NeoQuasar/Kronos-small")
 
 # 2. Instantiate Predictor
 predictor = KronosPredictor(model, tokenizer, device="cuda:0", max_context=512)
-
+args = parse_args()
+df=GetTDXData_v3(args.ticker,2500,args.interval)
+print(df.tail())
 # 3. Prepare Data
-df = pd.read_csv("./data/XSHG_5min_600977.csv")
-df['timestamps'] = pd.to_datetime(df['timestamps'])
-
+#df = pd.read_csv("./data/XSHG_5min_600977.csv")
+#df = GetTDXData_v3('000001.ss', 2500,'5m')
+df.columns = [col.lower() for col in df.columns]
+df['timestamps'] = df.index
+df=df[['timestamps','open','high','low','close','volume','amount']]
+df.reset_index(drop=True, inplace=True)
 lookback = 400
 pred_len = 120
 
